@@ -1,16 +1,17 @@
 # Retirement Planning Calculator
 
-A comprehensive Python application for generating detailed retirement projections based on your financial situation, expected returns, and major life expenses.
+A comprehensive web-based application for generating detailed retirement projections based on your financial situation, expected returns, and major life expenses.
 
 ## Features
 
-- Interactive command-line interface for easy input
-- Support for JSON/YAML configuration files
+- Modern, interactive web interface
+- Real-time visualization of retirement projections
 - Detailed year-by-year financial projections
-- Multiple output formats (CSV, Excel)
-- Visualizations of corpus growth and expense breakdowns
-- Handles multiple children with customizable education and marriage expenses
+- Interactive charts for corpus growth and expense breakdowns
+- Support for multiple children with customizable education and marriage expenses
 - Accounts for inflation and different pre/post-retirement returns
+- Export results to CSV and Excel formats
+- Mobile-responsive design
 
 ## Installation
 
@@ -31,71 +32,90 @@ A comprehensive Python application for generating detailed retirement projection
    pip install -r requirements.txt
    ```
 
-## Usage
+## Running the Web Application
 
-### Interactive Mode
-
-Run the application without any arguments to use the interactive mode:
+To start the Streamlit web application, run:
 
 ```bash
-python main.py
+streamlit run streamlit_app.py
 ```
 
-The application will prompt you for all the necessary inputs.
+This will start a local web server and open the application in your default web browser. If it doesn't open automatically, you can access it at `http://localhost:8501`.
 
-### Using a Configuration File
+## Using the Application
 
-You can also provide a configuration file in JSON or YAML format:
+1. **Basic Information**: Fill in your current age, planned retirement age, life expectancy, current savings, and monthly expenses.
+2. **Investment Returns**: Set your expected pre-retirement and post-retirement returns, and the expected inflation rate.
+3. **Children's Information** (Optional): Add details about your children's education and future expenses.
+4. **Generate Plan**: Click the "Generate Retirement Plan" button to see your projections.
+5. **Review & Download**: View the interactive charts and download the results as CSV or Excel.
+
+## Features in Detail
+
+### Interactive Visualizations
+- **Corpus vs Expenses**: See how your retirement corpus grows over time compared to your expenses.
+- **Expense Breakdown**: Visualize how different expense categories contribute to your total expenses.
+
+### Detailed Projections
+- Year-by-year breakdown of your financial situation
+- Detailed expense categorization
+- Corpus growth projections
+
+### Export Options
+- Download your retirement plan as CSV or Excel
+- Save visualizations for offline review
+
+## Running Tests
+
+To run the test suite:
 
 ```bash
-python main.py -c config.json
+pytest
 ```
 
-Example `config.json`:
+## Contributing
 
-```json
-{
-    "current_age": 35,
-    "retirement_age": 60,
-    "life_expectancy": 90,
-    "current_corpus": 5000000,
-    "pre_retirement_return": 10.0,
-    "post_retirement_return": 7.0,
-    "inflation": 6.0,
-    "monthly_expenses": 50000,
-    "children": [
-        {
-            "current_age": 5,
-            "school_fee": 150000,
-            "school_fee_increase": 8.0,
-            "fee_increase_frequency": 2,
-            "graduation_fee": 1000000,
-            "marriage_cost": 5000000,
-            "marriage_age": 28
-        }
-    ]
-}
-```
+Contributions are welcome! Please feel free to submit a Pull Request.
 
-### Output
+## License
 
-The application will generate the following files in the `output` directory (or a custom directory specified with `-o`):
-
-- `retirement_plan_YYYYMMDD_HHMMSS.csv` - Detailed year-by-year projections
-- `retirement_plan_YYYYMMDD_HHMMSS.xlsx` - Same data in Excel format
-- `retirement_projection.png` - Visualization of corpus vs. expenses
-- `expense_breakdown.png` - Stacked area chart of expense categories
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
 ## Project Structure
 
-- `main.py` - Command-line interface and main entry point
-- `retirement_planner/` - Core package
-  - `__init__.py` - Package initialization
-  - `models.py` - Data models and classes
-  - `calculations.py` - Core calculation logic
-  - `io_handlers.py` - Input/output operations
-  - `visualization.py` - Plotting functions
-- `requirements.txt` - Python dependencies
+```
+retirement_planner/
+├── __init__.py
+├── calculations.py    # Core retirement calculation logic
+├── models.py         # Data models and classes
+├── io_handlers.py    # Input/output handling
+├── visualization.py  # Visualization functions
+└── streamlit_app.py  # Streamlit web application
+```
+
+## Running the Application
+
+1. First, install the required dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+2. Start the Streamlit application:
+   ```bash
+   streamlit run streamlit_app.py
+   ```
+
+3. Open your web browser and navigate to `http://localhost:8501`
+
+4. Fill in your financial details and click "Generate Retirement Plan" to see the projections.
+
+## Output
+
+The application will generate interactive visualizations directly in the browser, and you can download the following:
+
+- **CSV/Excel Exports**: Detailed year-by-year projections
+- **Interactive Charts**: Visualize corpus growth and expense breakdowns
+- **Summary Metrics**: Key financial metrics at a glance
 
 ## Contributing
 
