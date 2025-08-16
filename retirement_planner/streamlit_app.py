@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+import plotly.graph_objects as go
 from pathlib import Path
 import base64
 from datetime import datetime
@@ -11,13 +12,22 @@ from retirement_planner.calculations import generate_yearly_projections
 from retirement_planner.io_handlers import parse_config
 from retirement_planner.models import RetirementParams, Child
 
+# Import SIP calculator
+import sys
+import os
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from sip_planner import calculate_sip_amount, calculate_sip_projection
+
 # Page configuration
 st.set_page_config(
-    page_title="Retirement Planner",
+    page_title="Financial Planner",
     page_icon="💰",
     layout="wide",
     initial_sidebar_state="expanded"
 )
+
+# Create tabs for different calculators
+tab1, tab2 = st.tabs(["Retirement Planner", "SIP Calculator"])
 
 # Custom CSS for better styling
 st.markdown("""
@@ -32,9 +42,6 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
-# App header
-st.markdown("<h1 class='main-header'>Retirement Planning Tool</h1>", unsafe_allow_html=True)
-
 # Initialize session state for form data and results
 if 'projections' not in st.session_state:
     st.session_state.projections = None
@@ -48,38 +55,43 @@ def get_table_download_link(df, filename, link_text):
     href = f'<a href="data:file/csv;base64,{b64}" download="{filename}">{link_text}</a>'
     return href
 
-# Input form with expandable sections
-with st.form("retirement_form"):
-    st.markdown("### Basic Information")
-    col1, col2, col3 = st.columns(3)
+# Retirement Planner Tab
+with tab1:
+    st.markdown("<h1 class='main-header'>Retirement Planning Tool</h1>", unsafe_allow_html=True)
     
-    with col1:
-        current_age = st.number_input("Current Age", min_value=18, max_value=100, value=35, step=1)
-        retirement_age = st.number_input("Planned Retirement Age", min_value=18, max_value=100, value=60, step=1)
-        life_expectancy = st.number_input("Life Expectancy", min_value=60, max_value=120, value=85, step=1)
-    
-    with col2:
-        current_corpus = st.number_input("Current Savings (₹)", min_value=0, value=1000000, step=100000)
-        monthly_expenses = st.number_input("Current Monthly Expenses (₹)", min_value=0, value=50000, step=5000)
-        inflation = st.number_input("Expected Inflation Rate (%)", min_value=0.0, max_value=20.0, value=6.0, step=0.1) / 100
-    
-    with col3:
-        pre_ret_return = st.number_input("Pre-retirement Return (% p.a.)", min_value=0.0, max_value=30.0, value=10.0, step=0.1) / 100
-        post_ret_return = st.number_input("Post-retirement Return (% p.a.)", min_value=0.0, max_value=30.0, value=8.0, step=0.1) / 100
-    
-    # Children section
-    st.markdown("### Children's Information (Optional)")
-    children = []
-    
-    if 'num_children' not in st.session_state:
-        st.session_state.num_children = 1
-    
-    num_children = st.number_input("Number of Children", min_value=0, max_value=5, value=0, step=1, 
-                                 key="num_children")
-    
-    for i in range(num_children):
-        with st.expander(f"Child {i+1} Details", expanded=True):
-            col1, col2 = st.columns(2)
+    # Input form with expandable sections
+    with st.form("retirement_form"):
+        st.markdown("### Basic Information")
+        
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            current_age = st.number_input("Current Age", min_value=18, max_value=100, value=35, step=1)
+            retirement_age = st.number_input("Planned Retirement Age", min_value=18, max_value=100, value=60, step=1)
+            life_expectancy = st.number_input("Life Expectancy", min_value=60, max_value=120, value=85, step=1)
+        
+        with col2:
+            current_corpus = st.number_input("Current Savings (₹)", min_value=0, value=1000000, step=100000)
+            monthly_expenses = st.number_input("Current Monthly Expenses (₹)", min_value=0, value=50000, step=5000)
+            inflation = st.number_input("Expected Inflation Rate (%)", min_value=0.0, max_value=20.0, value=6.0, step=0.1) / 100
+        
+        with col3:
+            pre_ret_return = st.number_input("Pre-retirement Return (% p.a.)", min_value=0.0, max_value=30.0, value=10.0, step=0.1) / 100
+            post_ret_return = st.number_input("Post-retirement Return (% p.a.)", min_value=0.0, max_value=30.0, value=8.0, step=0.1) / 100
+        
+        # Children section
+        st.markdown("### Children's Information (Optional)")
+        
+        if 'num_children' not in st.session_state:
+            st.session_state.num_children = 1
+        
+        num_children = st.number_input("Number of Children", min_value=0, max_value=5, value=0, step=1, 
+                                     key="num_children")
+        
+        children = []
+        for i in range(num_children):
+            with st.expander(f"Child {i+1} Details", expanded=True):
+                col1, col2 = st.columns(2)
             with col1:
                 child_age = st.number_input(f"Child {i+1} Age", min_value=0, max_value=30, value=5, key=f"child_{i}_age")
                 school_fee = st.number_input(f"Current Annual School Fee (₹)", min_value=0, value=50000, 
@@ -104,50 +116,168 @@ with st.form("retirement_form"):
                 'marriage_cost': marriage_cost,
                 'marriage_age': marriage_age
             })
-    
-    # Submit button
-    submitted = st.form_submit_button("Generate Retirement Plan")
-    
-    if submitted:
-        # Prepare parameters
-        params = {
-            'current_age': current_age,
-            'retirement_age': retirement_age,
-            'life_expectancy': life_expectancy,
-            'current_corpus': current_corpus,
-            'pre_retirement_return': pre_ret_return * 100,  # Convert to percentage for parsing
-            'post_retirement_return': post_ret_return * 100,
-            'inflation': inflation * 100,
-            'monthly_expenses': monthly_expenses,
-            'children': children
-        }
         
-        try:
-            # Generate projections
-            retirement_params = parse_config(params)
-            projections = generate_yearly_projections(retirement_params)
+        # Submit button at the end of the form
+        submitted = st.form_submit_button("Generate Retirement Plan")
+        
+        if submitted:
+            # Prepare parameters
+            params = {
+                'current_age': current_age,
+                'retirement_age': retirement_age,
+                'life_expectancy': life_expectancy,
+                'current_corpus': current_corpus,
+                'pre_retirement_return': pre_ret_return * 100,  # Convert to percentage for parsing
+                'post_retirement_return': post_ret_return * 100,
+                'inflation': inflation * 100,
+                'monthly_expenses': monthly_expenses,
+                'children': children
+            }
             
-            # Store results in session state
-            st.session_state.projections = projections
-            st.session_state.show_results = True
-            
-            # Convert to DataFrame for display
-            df = pd.DataFrame(projections)
-            
-            # Add year column if not exists
-            if 'year' not in df.columns and 'age' in df.columns:
-                current_year = datetime.now().year
-                df['year'] = df['age'].apply(lambda x: current_year + (x - current_age))
-            
-            st.session_state.df = df
-            
-        except Exception as e:
-            st.error(f"An error occurred: {str(e)}")
-            st.session_state.show_results = False
+            try:
+                # Generate projections
+                retirement_params = parse_config(params)
+                projections = generate_yearly_projections(retirement_params)
+                
+                # Store results in session state
+                st.session_state.projections = projections
+                st.session_state.show_results = True
+                
+                # Convert to DataFrame for display
+                df = pd.DataFrame(projections)
+                
+                # Add year column if not exists
+                if 'year' not in df.columns and 'age' in df.columns:
+                    current_year = datetime.now().year
+                    df['year'] = df['age'].apply(lambda x: current_year + (x - current_age))
+                
+                st.session_state.df = df
+                
+            except Exception as e:
+                st.error(f"An error occurred: {str(e)}")
+                st.session_state.show_results = False
 
-# Display results if available
+# SIP Calculator Tab
+with tab2:
+    st.markdown("<h1 class='main-header'>SIP Calculator</h1>", unsafe_allow_html=True)
+    
+    st.markdown("### Calculate the monthly SIP amount needed to reach your financial goals")
+    
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        target_amount = st.number_input(
+            "Target Amount (₹)", 
+            min_value=1000, 
+            value=1000000, 
+            step=10000
+        )
+        
+        years = st.slider(
+            "Investment Period (Years)", 
+            min_value=1, 
+            max_value=50, 
+            value=10, 
+            step=1
+        )
+    
+    with col2:
+        expected_return = st.slider(
+            "Expected Annual Return (%)", 
+            min_value=1.0, 
+            max_value=30.0, 
+            value=12.0, 
+            step=0.5
+        )
+        
+        initial_investment = st.number_input(
+            "Initial Investment (₹) - Optional", 
+            min_value=0, 
+            value=0, 
+            step=10000
+        )
+    
+    if st.button("Calculate SIP"):
+        # Calculate required SIP amount
+        required_sip = calculate_sip_amount(
+            target_amount=target_amount,
+            years=years,
+            expected_return_rate=expected_return
+        )
+        
+        # Generate projection
+        projections = calculate_sip_projection(
+            monthly_sip=required_sip,
+            years=years,
+            expected_return_rate=expected_return,
+            initial_investment=initial_investment
+        )
+        
+        # Display results
+        st.markdown("## Results")
+        
+        col1, col2, col3 = st.columns(3)
+        
+        with col1:
+            st.metric("Monthly SIP Required", f"₹{required_sip:,.2f}")
+        with col2:
+            total_invested = (years * 12 * required_sip) + initial_investment
+            st.metric("Total Amount Invested", f"₹{total_invested:,.2f}")
+        with col3:
+            returns = target_amount - total_invested
+            st.metric("Estimated Returns", f"₹{returns:,.2f}")
+        
+        # Create projection chart
+        st.markdown("### Projection Over Time")
+        
+        df_sip = pd.DataFrame(projections)
+        
+        fig = go.Figure()
+        
+        # Add traces
+        fig.add_trace(go.Scatter(
+            x=df_sip['year'],
+            y=df_sip['total_invested'],
+            name='Total Invested',
+            mode='lines+markers',
+            line=dict(color='#1f77b4')
+        ))
+        
+        fig.add_trace(go.Scatter(
+            x=df_sip['year'],
+            y=df_sip['corpus'],
+            name='Expected Corpus',
+            mode='lines+markers',
+            line=dict(color='#2ca02c')
+        ))
+        
+        fig.update_layout(
+            xaxis_title='Years',
+            yaxis_title='Amount (₹)',
+            legend=dict(orientation='h', yanchor='bottom', y=1.02, xanchor='right', x=1),
+            hovermode='x unified',
+            height=500
+        )
+        
+        st.plotly_chart(fig, use_container_width=True)
+        
+        # Show detailed table
+        st.markdown("### Yearly Projection")
+        st.dataframe(df_sip.round(2), use_container_width=True)
+        
+        # Download button
+        csv = df_sip.to_csv(index=False).encode('utf-8')
+        st.download_button(
+            label="Download Projection as CSV",
+            data=csv,
+            file_name=f"sip_projection_{datetime.now().strftime('%Y%m%d')}.csv",
+            mime="text/csv"
+        )
+
+# Display retirement results if available
 if st.session_state.show_results and st.session_state.projections:
-    df = st.session_state.df
+    with tab1:
+        df = st.session_state.df
     
     # Key Metrics
     st.markdown("## Retirement Plan Summary")
