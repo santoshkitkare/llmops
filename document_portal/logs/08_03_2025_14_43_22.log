@@ -1,0 +1,7 @@
+{"session_path": "data/document_compare/session_20250803_091322_4f23fe8a", "timestamp": "2025-08-03T09:13:22.578580Z", "level": "info", "event": "DocumentComparator initialized"}
+{"reference": "data/document_compare/session_20250803_091322_4f23fe8a/Long_Report_V1.pdf", "actual": "data/document_compare/session_20250803_091322_4f23fe8a/Long_Report_V2.pdf", "session": "session_20250803_091322_4f23fe8a", "timestamp": "2025-08-03T09:13:22.578860Z", "level": "info", "event": "Files saved"}
+{"file": "data/document_compare/session_20250803_091322_4f23fe8a/Long_Report_V1.pdf", "pages": 1, "timestamp": "2025-08-03T09:13:22.593585Z", "level": "info", "event": "PDF read successfully"}
+{"file": "data/document_compare/session_20250803_091322_4f23fe8a/Long_Report_V2.pdf", "pages": 1, "timestamp": "2025-08-03T09:13:22.595031Z", "level": "info", "event": "PDF read successfully"}
+{"count": 2, "session": "session_20250803_091322_4f23fe8a", "timestamp": "2025-08-03T09:13:22.595148Z", "level": "info", "event": "Documents combined"}
+{"path": "data/document_compare/session_20250803_090335_75a1c95a", "timestamp": "2025-08-03T09:13:22.595364Z", "level": "info", "event": "Old session folder deleted"}
+{"available_keys": ["GOOGLE_API_KEY", "GROQ_API_KEY"], "timestamp": "2025-08-03T09:13:22.597144Z", "level": "info", "event": "Environment variables validated"}
