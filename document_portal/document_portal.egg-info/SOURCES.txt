@@ -25,4 +25,3 @@ utils/config_loader.py
 utils/document_ops.py
 utils/file_io.py
 utils/model_loader.py
-utils/test_path.py
