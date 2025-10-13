@@ -1,0 +1,103 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Lambda + EventBridge to stop ECS service daily
+
+Parameters:
+  ECSClusterName:
+    Type: String
+    Default: document-portal-cluster
+    Description: ECS Cluster Name
+  ECSServiceName:
+    Type: String
+    Default: document-portal-service
+    Description: ECS Service Name
+  LambdaScheduleExpression:
+    Type: String
+    Default: "cron(0 18 * * ? *)"
+    Description: UTC hour to stop the ECS service daily (HH)
+
+
+Resources:
+  LambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: LambdaStopECSRole
+      AssumeRolePolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action: sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        - PolicyName: ECSUpdateServicePolicy
+          PolicyDocument:
+            Version: "2012-10-17"
+            Statement:
+              - Effect: Allow
+                Action:
+                  - ecs:UpdateService
+                  - ecs:DescribeServices
+                  - ecs:ListClusters
+                Resource: "*"
+
+  StopECSLambda:
+    Type: AWS::Lambda::Function
+    Properties:
+      FunctionName: StopECSService
+      Runtime: python3.11
+      Handler: index.lambda_handler
+      Role: !GetAtt LambdaExecutionRole.Arn
+      Timeout: 30
+      Code:
+        ZipFile: |
+          import boto3
+          import os
+
+          ecs = boto3.client('ecs')
+
+          CLUSTER_NAME = os.environ['ECS_CLUSTER']
+          SERVICE_NAME = os.environ['ECS_SERVICE']
+
+          def lambda_handler(event, context):
+              response = ecs.update_service(
+                  cluster=CLUSTER_NAME,
+                  service=SERVICE_NAME,
+                  desiredCount=0
+              )
+              return {
+                "statusCode": 200,
+                "body": json.dumps(response, default=str)
+              }
+      Environment:
+        Variables:
+          ECS_CLUSTER: !Ref ECSClusterName
+          ECS_SERVICE: !Ref ECSServiceName
+
+  StopECSRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Name: DailyStopECS
+      ScheduleExpression: !Sub "${LambdaScheduleExpression}"
+      State: ENABLED
+      Targets:
+        - Arn: !GetAtt StopECSLambda.Arn
+          Id: StopECSLambdaTarget
+
+  LambdaPermissionForEvents:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !Ref StopECSLambda
+      Action: lambda:InvokeFunction
+      Principal: events.amazonaws.com
+      SourceArn: !GetAtt StopECSRule.Arn
+
+Outputs:
+  LambdaFunctionName:
+    Description: Name of the Lambda stopping ECS
+    Value: !Ref StopECSLambda
+  EventBridgeRule:
+    Description: EventBridge rule name
+    Value: !Ref StopECSRule
