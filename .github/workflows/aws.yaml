@@ -5,10 +5,10 @@ on:
     types:
       - completed
 env:
-  AWS_REGION: ap-southeast-2
+  AWS_REGION: ap-south-2
   ECR_REPOSITORY: documentportalliveclass
   ECS_SERVICE: document-portal-service
-  ECS_CLUSTER: document-portal-cluster
+  ECS_CLUSTER: document-portal-cluster1
   ECS_TASK_DEFINITION: .github/workflows/task_definition.json
   CONTAINER_NAME: document-portal-container
 
@@ -54,6 +54,7 @@ jobs:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
+          cd document_portal
           IMAGE_URI=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
           echo "IMAGE_URI=$IMAGE_URI" >> $GITHUB_ENV
           docker build -t $IMAGE_URI .
