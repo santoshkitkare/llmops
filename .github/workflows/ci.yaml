@@ -24,4 +24,5 @@ jobs:
 
       - name: Run unit tests
         run: |
+          cd document_portal
           pytest tests/
