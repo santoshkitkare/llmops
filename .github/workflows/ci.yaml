@@ -1,7 +1,15 @@
 # .github/workflows/ci.yml
 name: Run Unit Tests
 
-on: [push, pull_request]
+on: 
+  push:
+    paths:
+      - 'document_portal/**'
+    branches: [ main ]
+  pull_request:
+    paths:
+      - 'document_portal/**'
+    branches: [ main ]
 
 jobs:
   test:
